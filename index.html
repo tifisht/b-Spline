@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B-Spline 可视化</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Interactive Curve Lab</p>
+          <h1>B-Spline 可视化页面</h1>
+          <p class="hero-text">
+            拖动控制点，增删节点，实时观察 B-spline 曲线、基函数和参数变化。
+          </p>
+        </div>
+        <div class="hero-badges">
+          <span class="badge">可拖动控制点</span>
+          <span class="badge">实时参数高亮</span>
+          <span class="badge">基函数联动</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="stage-card">
+          <div class="card-topline">
+            <div>
+              <p class="section-kicker">Curve View</p>
+              <h2>主画布</h2>
+            </div>
+            <p class="section-tip">拖动点位，或双击空白区域添加新点</p>
+          </div>
+
+          <div class="toolbar">
+            <button id="addPointBtn" class="action-btn action-btn-primary" type="button">
+              增加控制点
+            </button>
+            <button id="removePointBtn" class="action-btn" type="button">
+              删除控制点
+            </button>
+            <button id="resetBtn" class="action-btn action-btn-ghost" type="button">
+              重置示例
+            </button>
+          </div>
+
+          <div class="stage-wrap">
+            <svg id="curveSvg" class="curve-svg" viewBox="0 0 1000 620" aria-label="B-spline curve">
+              <defs>
+                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <g id="gridLayer"></g>
+              <path id="controlPolygon" class="control-polygon"></path>
+              <path id="curvePath" class="curve-path"></path>
+              <g id="controlPointsLayer"></g>
+              <g id="currentPointLayer"></g>
+            </svg>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel-card">
+            <div class="card-topline">
+              <div>
+                <p class="section-kicker">Controls</p>
+                <h2>参数调节</h2>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="degreeRange">次数 p</label>
+              <div class="range-row">
+                <input id="degreeRange" type="range" min="1" max="5" value="3" />
+                <span id="degreeValue" class="value-pill">3</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="sampleRange">采样数</label>
+              <div class="range-row">
+                <input id="sampleRange" type="range" min="60" max="500" step="10" value="240" />
+                <span id="sampleValue" class="value-pill">240</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="uRange">参数 u</label>
+              <div class="range-row">
+                <input id="uRange" type="range" min="0" max="1" step="0.001" value="0.5" />
+                <span id="uValue" class="value-pill">0.500</span>
+              </div>
+            </div>
+
+            <div class="stat-grid">
+              <article class="stat-card">
+                <span class="stat-label">控制点数</span>
+                <strong id="pointCountStat">0</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">当前跨度</span>
+                <strong id="spanStat">-</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">曲线点 C(u)</span>
+                <strong id="currentPointStat">-</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">节点向量长度</span>
+                <strong id="knotCountStat">-</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="card-topline">
+              <div>
+                <p class="section-kicker">Formula</p>
+                <h2>公式与定义</h2>
+              </div>
+            </div>
+
+            <div class="formula-block">
+              <p class="formula-main">
+                C(u) = <span class="sigma">∑</span><sub>i=0</sub><sup>n</sup> N<sub>i,p</sub>(u) P<sub>i</sub>
+              </p>
+              <p class="formula-sub">
+                N<sub>i,0</sub>(u) =
+                1, 当 u<sub>i</sub> ≤ u &lt; u<sub>i+1</sub>；否则为 0
+              </p>
+              <p class="formula-sub">
+                N<sub>i,p</sub>(u) =
+                (u-u<sub>i</sub>)/(u<sub>i+p</sub>-u<sub>i</sub>) · N<sub>i,p-1</sub>(u)
+                + (u<sub>i+p+1</sub>-u)/(u<sub>i+p+1</sub>-u<sub>i+1</sub>) · N<sub>i+1,p-1</sub>(u)
+              </p>
+            </div>
+
+            <div class="note-block">
+              <p>本页使用夹持均匀节点向量（clamped uniform knots）。</p>
+              <p>控制点标签为 P<sub>i</sub>，当前参数点标签为 C(u)。</p>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="card-topline">
+              <div>
+                <p class="section-kicker">Live Terms</p>
+                <h2>当前权重</h2>
+              </div>
+            </div>
+            <div id="basisTerms" class="basis-terms"></div>
+            <div class="knot-wrap">
+              <p class="mini-title">节点向量 U</p>
+              <div id="knotVector" class="knot-vector"></div>
+            </div>
+          </section>
+        </aside>
+      </main>
+
+      <section class="basis-card">
+        <div class="card-topline">
+          <div>
+            <p class="section-kicker">Basis Functions</p>
+            <h2>N<sub>i,p</sub>(u) 基函数曲线</h2>
+          </div>
+          <p class="section-tip">竖线对应当前参数 u</p>
+        </div>
+        <div class="basis-wrap">
+          <svg id="basisSvg" class="basis-svg" viewBox="0 0 1000 260" aria-label="B-spline basis functions">
+            <g id="basisGridLayer"></g>
+            <g id="basisPathsLayer"></g>
+            <g id="basisMarkerLayer"></g>
+          </svg>
+        </div>
+      </section>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
